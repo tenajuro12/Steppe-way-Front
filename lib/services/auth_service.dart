@@ -16,7 +16,7 @@ class AuthService {
           headers: {
             'Content-Type': 'application/json',
           },
-          extra: {'withCredentials': true}, // Required for web-based cookie handling
+          extra: {'withCredentials': true},
         ),
       );
 
@@ -28,7 +28,6 @@ class AuthService {
       print('Response Status: ${response.statusCode}');
       print('Response Data: ${response.data}');
 
-      // Ensure session token is treated as a string
       final String? sessionToken = response.data['session_token']?.toString();
 
       if (sessionToken != null && sessionToken.isNotEmpty) {

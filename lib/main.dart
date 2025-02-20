@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       initialRoute: _isLoggedIn ? '/home' : '/login',
       routes: {
-        '/register':(context) => const RegisterScreen(),
+        '/register': (context) => const RegisterScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
       },
