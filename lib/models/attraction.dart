@@ -20,6 +20,8 @@
     });
 
     factory Attraction.fromJson(Map<String, dynamic> json) {
+      final imagePath = json['image_url'];
+
       return Attraction(
         id: json['ID'] != null ? json['ID'] as int : 0,
         title: json['title'] ?? '',
@@ -28,7 +30,8 @@
         location: json['location'] ?? '',
         isPublished: json['is_published'] ?? false,
         adminId: json['admin_id'] != null ? json['admin_id'] as int : 0,
-        imageUrl: json['image_url'] ?? '',
-      );
+        imageUrl: (imagePath != null && imagePath.isNotEmpty)
+            ? 'http://localhost:8080$imagePath'  // ✅ Only prepend if valid
+            : '',     );
     }
   }
