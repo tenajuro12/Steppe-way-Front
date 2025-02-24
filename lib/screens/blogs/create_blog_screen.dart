@@ -15,19 +15,16 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
   final _contentController = TextEditingController();
   final _categoryController = TextEditingController();
 
-  // Instantiate Dio with your backend's base URL.
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:8080', // Use http://10.0.2.2:8080 for Android emulators
+    baseUrl: 'http://localhost:8080',
     headers: {'Content-Type': 'application/json'},
   ));
 
-  // Secure storage instance to retrieve the session token.
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<void> createBlog() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // Retrieve the session token from secure storage.
         final token = await _storage.read(key: 'session_token');
         if (token == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -36,14 +33,12 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
           return;
         }
 
-        // Send POST request to create a blog, including the session token in the Cookie header.
         final response = await _dio.post(
           '/blogs',
           data: {
             'title': _titleController.text,
             'content': _contentController.text,
             'category': _categoryController.text,
-            // Optionally, include other fields (e.g., user_id) if needed by your backend.
           },
           options: Options(
             headers: {
@@ -52,7 +47,6 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
           ),
         );
 
-        // Check for a successful response (status code 200 or 201).
         if (response.statusCode == 200 || response.statusCode == 201) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Blog created successfully')),

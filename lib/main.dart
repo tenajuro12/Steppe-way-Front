@@ -3,6 +3,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:travel_kz/screens/home_screen.dart';
 import 'package:travel_kz/screens/login_screen.dart';
 import 'package:travel_kz/screens/register_screen.dart';
+import 'package:travel_kz/screens/map/map_screen.dart';
+
+import 'screens/attractions/attractions_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -41,6 +44,8 @@ class _MyAppState extends State<MyApp> {
         '/register': (context) => const RegisterScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
+        '/map': (context) => const MapScreen(),
+        '/attractions': (context) => const AttractionsListScreen(),
       },
     );
   }

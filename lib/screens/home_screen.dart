@@ -6,10 +6,12 @@ import '../services/attraction_service.dart';
 import '../services/blogs_service.dart';
 import '../services/event_service.dart';
 import 'attractions/attraction_details_screen.dart';
+import 'attractions/attractions_screen.dart';
 import 'blogs/blogs_detailed_screen.dart';
 import 'events/event_details_screen.dart';
 import 'events/events_screen.dart';
 import 'blogs/blogs_screen.dart';
+import 'map/map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,26 +48,63 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader('Upcoming Events'),
-            _buildUpcomingEventsList(),
-            _buildSectionHeader('Latest Blogs'),
-            _buildBlogsList(),
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BlogsScreen()),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _attractionsFuture = AttractionService.fetchAttractions();
+            _upcomingEventsFuture = EventService.fetchUpcomingEvents();
+            _blogsFuture = BlogService.fetchBlogs();
+          });
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.map),
+                      label: const Text('Map'),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MapScreen()),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.place),
+                      label: const Text('See All Attractions'),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AttractionsListScreen()),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Text('See All Blogs'),
               ),
-            ),
-            _buildSectionHeader('Popular Attractions'),
-            _buildAttractionsList(),
-          ],
+              _buildSectionHeader('Upcoming Events'),
+              _buildUpcomingEventsList(),
+              _buildSectionHeader('Latest Blogs'),
+              _buildBlogsList(),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BlogsScreen()),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text('See All Blogs'),
+                ),
+              ),
+              _buildSectionHeader('Popular Attractions'),
+              _buildAttractionsList(),
+            ],
+          ),
         ),
       ),
     );
@@ -73,10 +112,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -95,14 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final events = snapshot.data!;
         return SizedBox(
-          height: 200,
-          child: ListView.builder(
+          height: 230,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: events.length,
-            itemBuilder: (context, index) {
-              final event = events[index];
-              return _buildEventCard(event);
-            },
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => _buildEventCard(events[index]),
           ),
         );
       },
@@ -118,49 +158,50 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: SizedBox(
-          width: 160,
+          width: 180,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildEventImage(event.imageUrl),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  event.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Image.network(
+                  event.imageUrl,
+                  width: double.infinity,
+                  height: 120,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 120,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, size: 50),
+                  ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  event.startDate.toLocal().toString().split(' ')[0],
-                  style: const TextStyle(color: Colors.grey),
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      event.startDate.toLocal().toString().split(' ')[0],
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildEventImage(String imageUrl) {
-    return imageUrl.isNotEmpty
-        ? Image.network(
-      imageUrl,
-      width: 160,
-      height: 100,
-      fit: BoxFit.cover,
-    )
-        : Container(
-      width: 160,
-      height: 100,
-      color: Colors.grey[300],
-      child: const Icon(Icons.image_not_supported, size: 50),
     );
   }
 
@@ -178,14 +219,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final blogs = snapshot.data!;
         return SizedBox(
-          height: 180,
-          child: ListView.builder(
+          height: 200,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: blogs.length,
-            itemBuilder: (context, index) {
-              final blog = blogs[index];
-              return _buildBlogCard(blog);
-            },
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => _buildBlogCard(blogs[index]),
           ),
         );
       },
@@ -201,25 +241,24 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: SizedBox(
-          width: 200,
+          width: 220,
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   blog.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  blog.content.length > 60
-                      ? '${blog.content.substring(0, 60)}...'
-                      : blog.content,
+                  blog.content.length > 60 ? '${blog.content.substring(0, 60)}...' : blog.content,
                   style: const TextStyle(color: Colors.grey),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -228,8 +267,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('❤️ ${blog.likes}'),
-                    Text(blog.createdAt.toLocal().toString().split(' ')[0]),
+                    Row(children: [const Icon(Icons.favorite, size: 16, color: Colors.red), Text(' ${blog.likes}')]),
+                    Text(blog.createdAt.toLocal().toString().split(' ')[0], style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ],
@@ -253,14 +292,13 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final attractions = snapshot.data!;
-        return ListView.builder(
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: attractions.length,
-          itemBuilder: (context, index) {
-            final attraction = attractions[index];
-            return _buildAttractionCard(attraction);
-          },
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) => _buildAttractionCard(attractions[index]),
         );
       },
     );
@@ -268,19 +306,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAttractionCard(Attraction attraction) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
-        leading: attraction.imageUrl.isNotEmpty
-            ? Image.network(
-          attraction.imageUrl,
-          width: 60,
-          height: 60,
-          fit: BoxFit.cover,
-        )
-            : const Icon(Icons.image_not_supported, size: 60),
-        title: Text(attraction.title),
-        subtitle: Text('${attraction.city}\n${attraction.description}'),
-        isThreeLine: true,
+        contentPadding: const EdgeInsets.all(12),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: attraction.imageUrl.isNotEmpty
+              ? Image.network(
+            attraction.imageUrl,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+          )
+              : Container(
+            width: 60,
+            height: 60,
+            color: Colors.grey[300],
+            child: const Icon(Icons.image_not_supported),
+          ),
+        ),
+        title: Text(
+          attraction.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${attraction.city}\n${attraction.description}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
