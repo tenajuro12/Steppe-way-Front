@@ -6,7 +6,7 @@ import '../models/attraction.dart';
 class AttractionService {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  static const String _physicalDeviceUrl = 'http://172.20.10.2:8080';
+  static const String _physicalDeviceUrl = 'http://192.168.1.71:8080';
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8080';
   static const String _iosEmulatorUrl = 'http://localhost:8080';
 
@@ -25,20 +25,19 @@ class AttractionService {
     try {
       final String? sessionToken = await _storage.read(key: 'session_token');
       if (sessionToken == null) {
-        throw Exception('Session token not found');
+        print('❌ Session token not found');
+        throw Exception('Session token not found. Please log in.');
       }
 
-      print('🌐 Fetching attractions from: $baseUrl');
+      print('🌐 Fetching attractions from: $baseUrl with token: $sessionToken');
 
       final Dio dio = Dio(
         BaseOptions(
           baseUrl: baseUrl,
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer $sessionToken',
             'Cookie': 'session_token=$sessionToken',
           },
-          extra: {'withCredentials': true},
         ),
       );
 
@@ -68,11 +67,5 @@ class AttractionService {
       print('❌ Error fetching attractions: $e');
       throw Exception('Error fetching attractions: $e');
     }
-  }
-
-  static Future<void> printEnvironmentInfo() async {
-    print('Current Base URL: $baseUrl');
-    print('Platform: ${Platform.operatingSystem}');
-    print('Is Physical Device: ${!Platform.environment.containsKey('ANDROID_EMULATOR_IP') && !Platform.environment.containsKey('SIMULATOR_HOST')}');
   }
 }
