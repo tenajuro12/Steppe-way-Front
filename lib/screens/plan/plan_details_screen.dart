@@ -1,6 +1,7 @@
 // lib/screens/plan/plan_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:travel_kz/screens/plan/plan_map_screen.dart';
 import '../../models/plan.dart';
 import '../../services/plan_service.dart';
 import 'add_plan_item_screen.dart';
@@ -136,6 +137,20 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.map),
+            onPressed: () async {
+              final plan = await _planFuture;
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PlanMapScreen(plan: plan),
+                  ),
+                );
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () async {
               final plan = await _planFuture;
@@ -146,6 +161,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
           ),
         ],
       ),
+
       body: Stack(
         children: [
           FutureBuilder<Plan>(
@@ -237,33 +253,64 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          try {
-            final plan = await _planFuture;
-            if (mounted && plan.id != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddPlanItemScreen(plan: plan),
-                ),
-              ).then((_) => _loadPlan());
-            } else {
-              // Handle the case where plan id is null
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cannot add items: plan ID is missing')),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error loading plan: $e')),
-              );
-            }
-          }
-        },
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Map button
+          FloatingActionButton(
+            heroTag: 'map_button',
+            onPressed: () async {
+              final plan = await _planFuture;
+              if (mounted && plan.items.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PlanMapScreen(plan: plan),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Add some attractions or events to your plan first!'),
+                  ),
+                );
+              }
+            },
+            child: const Icon(Icons.map),
+            backgroundColor: Colors.green,
+          ),
+          const SizedBox(height: 16),
+          // Add item button
+          FloatingActionButton(
+            heroTag: 'add_button',
+            onPressed: () async {
+              try {
+                final plan = await _planFuture;
+                if (mounted && plan.id != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddPlanItemScreen(plan: plan),
+                    ),
+                  ).then((_) => _loadPlan());
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cannot add items: plan ID is missing')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error loading plan: $e')),
+                  );
+                }
+              }
+            },
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
+
     );
   }
 
@@ -548,6 +595,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
     );
   }
 
+
   Future<void> _deletePlanItem(PlanItem item) async {
     // Guard against null ID
     if (item.id == null) {
@@ -556,7 +604,31 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
       );
       return;
     }
-
+    void _openMap() async {
+      try {
+        final plan = await _planFuture;
+        if (mounted && plan.items.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PlanMapScreen(plan: plan),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Add some attractions or events to your plan first!'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading plan: $e')),
+          );
+        }
+      }
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
