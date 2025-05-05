@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  static const String _physicalDeviceUrl = 'http://192.168.1.71:8080';
+  static const String _physicalDeviceUrl = 'http://10.0.2.2:8080';
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8080';
   static const String _iosEmulatorUrl = 'http://localhost:8080';
 
@@ -45,33 +45,47 @@ class AuthService {
       print('Response Data: ${response.data}');
 
       if (response.statusCode == 200) {
-        // Extract the session token from cookies
-        String? sessionCookie;
+        String? sessionToken;
+
         response.headers.forEach((name, values) {
           if (name.toLowerCase() == 'set-cookie') {
             for (var value in values) {
               if (value.contains('session_token=')) {
-                sessionCookie = value;
-                // Extract just the token part
-                final RegExp regex = RegExp(r'session_token=([^;]+)');
-                final match = regex.firstMatch(value);
+                final match = RegExp(r'session_token=([^;]+)').firstMatch(value);
                 if (match != null && match.groupCount >= 1) {
-                  final token = match.group(1);
-                  if (token != null) {
-                    _storage.write(key: 'session_token', value: token);
-                    print('✅ Session token extracted and saved: $token');
-                  }
+                  sessionToken = match.group(1);
                 }
               }
             }
           }
         });
 
-        if (sessionCookie == null) {
-          // If we couldn't extract from cookies, store a placeholder for test purposes
-          // This is just for debugging - in production, you'd want to fail if no token is found
-          await _storage.write(key: 'session_token', value: 'dummy_token_for_testing');
-          print('⚠️ No session cookie found, using dummy token for testing');
+        if (sessionToken != null) {
+          await _storage.write(key: 'session_token', value: sessionToken);
+          print('✅ Session token saved: $sessionToken');
+        } else {
+          print('⚠️ No session cookie found');
+          return false;
+        }
+
+        // ✅ ВАЛИДАЦИЯ СЕССИИ для получения user_id
+        final validateRes = await dio.get(
+          '/validate-session',
+          options: Options(
+            headers: {
+              'Cookie': 'session_token=$sessionToken',
+            },
+          ),
+        );
+
+        if (validateRes.statusCode == 200) {
+          final data = validateRes.data;
+          await _storage.write(key: 'user_id', value: data['user_id'].toString());
+          await _storage.write(key: 'username', value: data['username']);
+          print('✅ User info saved: ${data['username']} (${data['user_id']})');
+        } else {
+          print('⚠️ Failed to validate session: ${validateRes.statusCode}');
+          return false;
         }
 
         return true;
@@ -84,6 +98,7 @@ class AuthService {
       return false;
     }
   }
+
   Future<bool> register(String email, String password, String username) async {
     try {
       print('🌐 Attempting registration to: $baseUrl');

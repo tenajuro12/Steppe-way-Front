@@ -1,4 +1,4 @@
-    class Attraction {
+class Attraction {
       final int id;
       final String title;
       final String description;
@@ -8,6 +8,8 @@
       final bool isPublished;
       final int adminId;
       final String imageUrl;
+      String category;
+
 
       Attraction({
         required this.id,
@@ -19,6 +21,8 @@
         required this.isPublished,
         required this.adminId,
         required this.imageUrl,
+        required this.category,
+
       });
 
       factory Attraction.fromJson(Map<String, dynamic> json) {
@@ -31,10 +35,11 @@
           city: json['city'] ?? '',
           location: json['location'] ?? '',
           address: json['address']?? '',
+          category: json['category'],
           isPublished: json['is_published'] ?? false,
           adminId: json['admin_id'] != null ? json['admin_id'] as int : 0,
           imageUrl: (imagePath != null && imagePath.isNotEmpty)
-              ? 'http://192.168.1.71:8080$imagePath'
+              ? 'http://10.0.2.2:8080$imagePath'
               : '',     );
       }
     }

@@ -6,7 +6,7 @@ import '../models/attraction.dart';
 class AttractionService {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  static const String _physicalDeviceUrl = 'http://192.168.1.71:8080';
+  static const String _physicalDeviceUrl = 'http://10.0.2.2:8080';
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8080';
   static const String _iosEmulatorUrl = 'http://localhost:8080';
 

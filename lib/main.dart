@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:travel_kz/screens/home_screen.dart';
 import 'package:travel_kz/screens/login_screen.dart';
+import 'package:travel_kz/screens/plan/plan_screen.dart';
 import 'package:travel_kz/screens/register_screen.dart';
 import 'package:travel_kz/screens/map/map_screen.dart';
 
@@ -46,6 +47,7 @@ class _MyAppState extends State<MyApp> {
         '/home': (context) => const HomeScreen(),
         '/map': (context) => const MapScreen(),
         '/attractions': (context) => const AttractionsListScreen(),
+        '/plan': (context) => const PlansScreen(),
       },
     );
   }
