@@ -35,7 +35,7 @@ class Event {
       startDate: DateTime.parse(json['start_date']),
       endDate: DateTime.parse(json['end_date']),
       imageUrl: json['image_url'] != null
-          ? 'http://192.168.1.71:8080${json['image_url']}'
+          ? 'http://10.0.2.2:8080${json['image_url']}'
           : '',
     );
   }
