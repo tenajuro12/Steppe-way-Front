@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/event.dart';
 
 class EventService {
-  static const String _physicalDeviceUrl = 'http://10.0.2.2:8080';
+  static const String _physicalDeviceUrl = 'http://192.168.88.65:8080';
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8080';
   static const String _iosEmulatorUrl = 'http://localhost:8080';
 
@@ -17,6 +17,53 @@ class EventService {
     }
     return _physicalDeviceUrl;
   }
+
+  static Future<Event> getEvent(int eventId) async {
+    try {
+      final Dio dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          headers: {'Content-Type': 'application/json'},
+        ),
+      );
+
+      final response = await dio.get('/events/$eventId');
+
+      if (response.statusCode == 200) {
+        return Event.fromJson(response.data);
+      } else {
+        throw Exception('Failed to load event. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching event: $e');
+    }
+  }
+
+  static Future<Event> fetchEventById(int eventId) async {
+    try {
+      print('🌐 Fetching event with ID: $eventId');
+
+      final Dio dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          headers: {'Content-Type': 'application/json'},
+        ),
+      );
+
+      final response = await dio.get('/events/$eventId');
+      print('📡 Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return Event.fromJson(response.data);
+      } else {
+        throw Exception('Failed to load event. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error fetching event: $e');
+      throw Exception('Error fetching event: $e');
+    }
+  }
+
 
   static Future<List<Event>> fetchUpcomingEvents() async {
     try {
