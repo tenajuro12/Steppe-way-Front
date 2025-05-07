@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:travel_kz/screens/plan/plan_map_screen.dart';
 import '../../models/plan.dart';
+import '../../services/attraction_service.dart';
+import '../../services/event_service.dart';
 import '../../services/plan_service.dart';
+import '../attractions/attraction_details_screen.dart';
+import '../events/event_details_screen.dart';
 import 'add_plan_item_screen.dart';
 import 'edit_plan_screen.dart';
 
@@ -44,6 +48,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
       }
     }
   }
+
 
   Future<void> _deletePlan(Plan plan) async {
     // Guard against null ID
@@ -96,14 +101,40 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
   Future<void> _optimizeRoute(int planId) async {
     setState(() => _isLoading = true);
     try {
+      print('🔄 Optimizing route for plan $planId...');
+
+      // First, print the current order
+      final currentPlan = await _planFuture;
+      final currentItems = currentPlan.items;
+      currentItems.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+      print('📋 Current order:');
+      for (var item in currentItems) {
+        print('  ${item.orderIndex}. ${item.title} (${item.location})');
+      }
+
+      // Call the optimize API
       await PlanService.optimizeRoute(planId);
-      _loadPlan();
+
+      // Force a complete reload of the plan data
+      print('🔄 Reloading plan data after optimization...');
+      await _loadPlan();
+
+      // Print the new order
+      final newPlan = await _planFuture;
+      final newItems = newPlan.items;
+      newItems.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+      print('📋 New optimized order:');
+      for (var item in newItems) {
+        print('  ${item.orderIndex}. ${item.title} (${item.location})');
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Route optimized successfully!')),
         );
       }
     } catch (e) {
+      print('❌ Error optimizing route: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error optimizing route: $e')),
@@ -115,7 +146,6 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -469,6 +499,8 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
 
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    child: InkWell(
+    onTap: () => _navigateToItemDetails(item),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -580,10 +612,6 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
-                  value: 'edit',
-                  child: Text('Edit'),
-                ),
-                const PopupMenuItem(
                   value: 'delete',
                   child: Text('Delete'),
                 ),
@@ -592,10 +620,63 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
+  void _navigateToItemDetails(PlanItem item) async {
+    try {
+      if (item.itemType == 'attraction') {
+        setState(() => _isLoading = true);
 
+        // Show loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Loading attraction details...')),
+        );
 
+        // Fetch the attraction
+        final attraction = await AttractionService.fetchAttractionById(item.itemId);
+
+        if (mounted) {
+          // Navigate to details screen with the full object
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AttractionDetailsScreen(attraction: attraction),
+            ),
+          );
+        }
+      } else if (item.itemType == 'event') {
+        setState(() => _isLoading = true);
+
+        // Show loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Loading event details...')),
+        );
+
+        // Fetch the event
+        final event = await EventService.fetchEventById(item.itemId);
+
+        if (mounted) {
+          // Navigate to details screen with the full object
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EventDetailsScreen(event: event),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading details: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
   Future<void> _deletePlanItem(PlanItem item) async {
     // Guard against null ID
     if (item.id == null) {

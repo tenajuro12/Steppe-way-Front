@@ -14,20 +14,22 @@ class PlanMapScreen extends StatefulWidget {
 }
 
 class _PlanMapScreenState extends State<PlanMapScreen> {
-  late GoogleMapController _mapController;
+  GoogleMapController? _mapController;
   final Map<MarkerId, Marker> _markers = {};
   final Map<PolylineId, Polyline> _polylines = {};
   MapType _mapType = MapType.normal;
-  bool _showingInfoPanel = false;
-  PlanItem? _selectedItem;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _createMarkersAndPolylines();
+    _createMarkersAndRoute();
   }
 
-  void _createMarkersAndPolylines() {
+  void _createMarkersAndRoute() {
+    // Clear existing markers and polylines
+    _markers.clear();
+
     // Sort items by order index
     final sortedItems = List<PlanItem>.from(widget.plan.items)
       ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
@@ -58,19 +60,15 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
           position: position,
           infoWindow: InfoWindow(
             title: item.title,
-            snippet: _formatSnippet(item),
+            snippet: item.description.length > 30
+                ? '${item.description.substring(0, 30)}...'
+                : item.description,
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(
               item.itemType == 'attraction'
                   ? BitmapDescriptor.hueRed
                   : BitmapDescriptor.hueBlue
           ),
-          onTap: () {
-            setState(() {
-              _selectedItem = item;
-              _showingInfoPanel = true;
-            });
-          },
         );
 
         setState(() {
@@ -81,7 +79,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
       }
     }
 
-
+    // Create a polyline if we have at least 2 points
     if (routePoints.length >= 2) {
       final polylineId = PolylineId('route');
       final polyline = Polyline(
@@ -90,7 +88,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
         color: Colors.blue,
         width: 5,
         patterns: [
-          PatternItem.dash(20),
+          PatternItem.dash(15),
           PatternItem.gap(10),
         ],
       );
@@ -101,19 +99,11 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
     }
   }
 
-  String _formatSnippet(PlanItem item) {
-    if (item.scheduledFor != null) {
-      final timeFormat = DateFormat('h:mm a');
-      return '${timeFormat.format(item.scheduledFor!)} • ${item.formattedDuration}';
-    }
-    return item.formattedDuration;
-  }
-
   @override
   Widget build(BuildContext context) {
-
+    // Default to Astana if no valid markers
     final LatLng initialPosition = _markers.isEmpty
-        ? const LatLng(51.1605, 71.4704)
+        ? const LatLng(51.1605, 71.4704) // Astana coordinates
         : _markers.values.first.position;
 
     return Scaffold(
@@ -129,7 +119,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
       body: Stack(
         children: [
           GoogleMap(
-            mapType: _mapType, // Use the state variable here
+            mapType: _mapType,
             initialCameraPosition: CameraPosition(
               target: initialPosition,
               zoom: 12.0,
@@ -146,276 +136,20 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
             myLocationButtonEnabled: true,
             myLocationEnabled: true,
             compassEnabled: true,
-            zoomControlsEnabled: false, // We'll add our own
-            onTap: (_) {
-              setState(() {
-                _showingInfoPanel = false;
-              });
-            },
+            zoomControlsEnabled: true,
           ),
-          // Custom zoom controls
-          Positioned(
-            right: 16,
-            bottom: _showingInfoPanel ? 240 : 16,
-            child: Column(
-              children: [
-                FloatingActionButton.small(
-                  heroTag: "zoom_in",
-                  child: const Icon(Icons.add),
-                  onPressed: () {
-                    _mapController.animateCamera(CameraUpdate.zoomIn());
-                  },
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  heroTag: "zoom_out",
-                  child: const Icon(Icons.remove),
-                  onPressed: () {
-                    _mapController?.animateCamera(CameraUpdate.zoomOut());
-                  },
-                ),
-              ],
-            ),
-          ),
-          // Fit bounds button
-          Positioned(
-            left: 16,
-            bottom: _showingInfoPanel ? 240 : 16,
-            child: FloatingActionButton(
-              heroTag: "fit_bounds",
-              child: const Icon(Icons.center_focus_strong),
-              onPressed: _fitBounds,
-            ),
-          ),
-          // Info panel for selected location
-          if (_showingInfoPanel && _selectedItem != null)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildInfoPanel(_selectedItem!),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInfoPanel(PlanItem item) {
-    final timeFormat = DateFormat('h:mm a');
-    final dateFormat = DateFormat('EEE, MMM d');
-
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle for dragging
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: item.itemType == 'attraction'
-                        ? Colors.red.withOpacity(0.1)
-                        : Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    item.itemType == 'attraction' ? Icons.place : Icons.event,
-                    color: item.itemType == 'attraction' ? Colors.red : Colors.blue,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (item.scheduledFor != null) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              dateFormat.format(item.scheduledFor!),
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(
-                              Icons.access_time,
-                              size: 14,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              timeFormat.format(item.scheduledFor!),
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _showingInfoPanel = false;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          const Divider(),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (item.description.isNotEmpty) ...[
-                      Text(
-                        item.description,
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.timelapse,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Duration: ${item.formattedDuration}',
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.address.isNotEmpty ? item.address : item.location,
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (item.notes.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Notes:',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.notes,
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.directions),
-                  label: const Text('DIRECTIONS'),
-                  onPressed: () {
-                    // You would implement opening directions in Google Maps here
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Opening directions in Google Maps...')),
-                    );
-                  },
-                ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.edit),
-                  label: const Text('EDIT'),
-                  onPressed: () {
-                    // You would implement edit functionality here
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Edit functionality would open here')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.center_focus_strong),
+        onPressed: _fitBounds,
       ),
     );
   }
@@ -473,6 +207,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
       },
     );
   }
+
   void _fitBounds() {
     if (_markers.isEmpty) return;
 
