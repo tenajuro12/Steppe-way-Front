@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../models/attraction.dart';
 import '../../models/review.dart';
+import '../../services/attraction_service.dart';
 
 class AttractionDetailsScreen extends StatefulWidget {
   final Attraction attraction;
@@ -17,7 +18,40 @@ class AttractionDetailsScreen extends StatefulWidget {
 
   @override
   State<AttractionDetailsScreen> createState() => _AttractionDetailsScreenState();
-}
+
+// In AttractionDetailsScreen
+  static Route<void> fromId(int attractionId) {
+    return MaterialPageRoute(
+      builder: (context) {
+        return FutureBuilder<Attraction>(
+          future: AttractionService.fetchAttractionById(attractionId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Scaffold(
+                appBar: AppBar(title: Text('Loading...')),
+                body: Center(child: CircularProgressIndicator()),
+              );
+            } else if (snapshot.hasError) {
+              return Scaffold(
+                appBar: AppBar(title: Text('Error')),
+                body: Center(
+                  child: Text('Error loading attraction: ${snapshot.error}'),
+                ),
+              );
+            } else if (!snapshot.hasData) {
+              return Scaffold(
+                appBar: AppBar(title: Text('Not Found')),
+                body: Center(child: Text('Attraction not found')),
+              );
+            }
+
+            // Successfully loaded the attraction
+            return AttractionDetailsScreen(attraction: snapshot.data!);
+          },
+        );
+      },
+    );
+  }}
 
 class _AttractionDetailsScreenState extends State<AttractionDetailsScreen> with SingleTickerProviderStateMixin {
   List<Review> reviews = [];
@@ -58,6 +92,8 @@ class _AttractionDetailsScreenState extends State<AttractionDetailsScreen> with 
     final storage = FlutterSecureStorage();
     return await storage.read(key: 'user_id');
   }
+
+
 
   Future<void> fetchReviews() async {
     try {
