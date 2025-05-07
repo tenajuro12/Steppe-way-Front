@@ -5,6 +5,7 @@ import 'package:travel_kz/screens/login_screen.dart';
 import 'package:travel_kz/screens/plan/plan_screen.dart';
 import 'package:travel_kz/screens/register_screen.dart';
 import 'package:travel_kz/screens/map/map_screen.dart';
+import 'package:travel_kz/screens/blogs/blogs_screen.dart';  // Import the blogs screen
 
 import 'screens/attractions/attractions_screen.dart';
 
@@ -48,7 +49,18 @@ class _MyAppState extends State<MyApp> {
         '/map': (context) => const MapScreen(),
         '/attractions': (context) => const AttractionsListScreen(),
         '/plan': (context) => const PlansScreen(),
+        '/blogs': (context) => const BlogsScreen(),
       },
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: true,
+        ),
+      ),
     );
   }
 }
