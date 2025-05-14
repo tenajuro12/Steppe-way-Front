@@ -31,7 +31,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
     super.dispose();
   }
 
-  // In create_plan_screen.dart
+
   Future<void> _createPlan() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -40,7 +40,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
     setState(() => _isLoading = true);
     try {
       final userId = await _storage.read(key: 'user_id');
-      print('User ID from storage: $userId'); // Add this debug line
+      print('User ID from storage: $userId');
 
       if (userId == null) {
         throw Exception('User not authenticated');
@@ -82,7 +82,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
     if (pickedDate != null && pickedDate != _startDate) {
       setState(() {
         _startDate = pickedDate;
-        // If end date is before start date, update it
+
         if (_endDate.isBefore(_startDate)) {
           _endDate = _startDate.add(const Duration(days: 7));
         }
@@ -210,7 +210,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                     subtitle: const Text('Allow others to view this plan'),
                     value: false,
                     onChanged: (value) {
-                      // Currently not implemented in the UI
+
                     },
                   ),
                   const SizedBox(height: 32),

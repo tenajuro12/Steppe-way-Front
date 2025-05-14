@@ -1,4 +1,4 @@
-// lib/screens/plans/edit_plan_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/plan.dart';
@@ -41,7 +41,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
     _endDate = widget.plan.endDate;
     _isPublic = widget.plan.isPublic;
 
-    // Add listeners to detect changes
+
     _titleController.addListener(_onFieldChanged);
     _descriptionController.addListener(_onFieldChanged);
     _cityController.addListener(_onFieldChanged);
@@ -111,7 +111,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Plan updated successfully!')),
         );
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -150,7 +150,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
         _startDate = pickedDate;
         _hasChanges = true;
 
-        // If end date is before start date, update it
+
         if (_endDate.isBefore(_startDate)) {
           _endDate = _startDate.add(const Duration(days: 7));
         }

@@ -27,10 +27,10 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
   }
 
   void _createMarkersAndRoute() {
-    // Clear existing markers and polylines
+
     _markers.clear();
 
-    // Sort items by order index
+
     final sortedItems = List<PlanItem>.from(widget.plan.items)
       ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
 
@@ -39,10 +39,10 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
     for (int i = 0; i < sortedItems.length; i++) {
       final item = sortedItems[i];
 
-      // Skip items without valid location data
+
       if (item.location.isEmpty) continue;
 
-      // Parse location string (assuming format is "lat, lng")
+
       final List<String> locationParts = item.location.split(',');
       if (locationParts.length != 2) continue;
 
@@ -54,7 +54,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
 
         final markerId = MarkerId(item.id?.toString() ?? i.toString());
 
-        // Create marker
+
         final marker = Marker(
           markerId: markerId,
           position: position,
@@ -79,7 +79,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
       }
     }
 
-    // Create a polyline if we have at least 2 points
+
     if (routePoints.length >= 2) {
       final polylineId = PolylineId('route');
       final polyline = Polyline(
@@ -101,9 +101,9 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Default to Astana if no valid markers
+
     final LatLng initialPosition = _markers.isEmpty
-        ? const LatLng(51.1605, 71.4704) // Astana coordinates
+        ? const LatLng(51.1605, 71.4704)
         : _markers.values.first.position;
 
     return Scaffold(
@@ -226,7 +226,6 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
       maxLng = lng > maxLng ? lng : maxLng;
     }
 
-    // Add padding
     final latPadding = (maxLat - minLat) * 0.2;
     final lngPadding = (maxLng - minLng) * 0.2;
 
@@ -236,7 +235,7 @@ class _PlanMapScreenState extends State<PlanMapScreen> {
           southwest: LatLng(minLat - latPadding, minLng - lngPadding),
           northeast: LatLng(maxLat + latPadding, maxLng + lngPadding),
         ),
-        50, // padding in pixels
+        50,
       ),
     );
   }

@@ -1,13 +1,17 @@
-// lib/screens/plan/plan_details_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:travel_kz/screens/plan/plan_map_screen.dart';
 import '../../models/plan.dart';
+import '../../services/accommodation_service.dart';
 import '../../services/attraction_service.dart';
 import '../../services/event_service.dart';
+import '../../services/food_service.dart';
 import '../../services/plan_service.dart';
+import '../accommodations/accommodation_details_screen.dart';
 import '../attractions/attraction_details_screen.dart';
 import '../events/event_details_screen.dart';
+import '../food/food_place_details_screen.dart';
 import 'add_plan_item_screen.dart';
 import 'edit_plan_screen.dart';
 
@@ -37,9 +41,17 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
     });
 
     try {
-      await _planFuture;
+      final plan = await _planFuture;
+      print('Loaded plan with ${plan.items.length} items');
+
+      if (plan.items.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        setState(() {
+          _planFuture = PlanService.getPlan(widget.planId);
+        });
+      }
     } catch (e) {
-      // Error handling in the FutureBuilder
+      print('Error loading plan: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -49,9 +61,8 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
     }
   }
 
-
   Future<void> _deletePlan(Plan plan) async {
-    // Guard against null ID
+
     if (plan.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot delete plan: plan ID is missing')),
@@ -103,7 +114,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
     try {
       print('🔄 Optimizing route for plan $planId...');
 
-      // First, print the current order
+
       final currentPlan = await _planFuture;
       final currentItems = currentPlan.items;
       currentItems.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
@@ -112,14 +123,14 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
         print('  ${item.orderIndex}. ${item.title} (${item.location})');
       }
 
-      // Call the optimize API
+
       await PlanService.optimizeRoute(planId);
 
-      // Force a complete reload of the plan data
+
       print('🔄 Reloading plan data after optimization...');
       await _loadPlan();
 
-      // Print the new order
+
       final newPlan = await _planFuture;
       final newItems = newPlan.items;
       newItems.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
@@ -220,7 +231,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
               }
 
               final plan = snapshot.data!;
-              // Guard against null ID for optimize button
+
               final canOptimize = plan.id != null;
 
               return SingleChildScrollView(
@@ -286,7 +297,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Map button
+
           FloatingActionButton(
             heroTag: 'map_button',
             onPressed: () async {
@@ -310,7 +321,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
             backgroundColor: Colors.green,
           ),
           const SizedBox(height: 16),
-          // Add item button
+
           FloatingActionButton(
             heroTag: 'add_button',
             onPressed: () async {
@@ -429,10 +440,10 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
   }
 
   Widget _buildItinerary(List<PlanItem> items) {
-    // Group items by date
+
     final Map<String, List<PlanItem>> itemsByDate = {};
     for (var item in items) {
-      // Handle null scheduledFor
+
       final date = item.scheduledFor != null
           ? DateFormat('yyyy-MM-dd').format(item.scheduledFor!)
           : 'Unscheduled';
@@ -443,10 +454,10 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
       itemsByDate[date]!.add(item);
     }
 
-    // Sort dates
+
     final sortedDates = itemsByDate.keys.toList()
       ..sort((a, b) {
-        if (a == 'Unscheduled') return 1; // Put unscheduled at the end
+        if (a == 'Unscheduled') return 1;
         if (b == 'Unscheduled') return -1;
         return a.compareTo(b);
       });
@@ -459,7 +470,7 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
         final date = sortedDates[index];
         final dayItems = itemsByDate[date]!;
 
-        // Format date header
+
         final String formattedDate;
         if (date == 'Unscheduled') {
           formattedDate = 'Unscheduled Items';
@@ -493,177 +504,302 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
       },
     );
   }
+
+
+
   Widget _buildPlanItemCard(PlanItem item, int index) {
-    final iconData = item.itemType == 'attraction' ? Icons.place : Icons.event;
-    final iconColor = item.itemType == 'attraction' ? Colors.red : Colors.blue;
+    IconData iconData;
+    Color iconColor;
+
+
+    switch(item.itemType) {
+      case 'attraction':
+        iconData = Icons.place;
+        iconColor = Colors.red;
+        break;
+      case 'event':
+        iconData = Icons.event;
+        iconColor = Colors.blue;
+        break;
+      case 'food':
+        iconData = Icons.restaurant;
+        iconColor = Colors.orange;
+        break;
+      case 'accommodation':
+        iconData = Icons.hotel;
+        iconColor = Colors.indigo;
+        break;
+      default:
+        iconData = Icons.calendar_today;
+        iconColor = Colors.grey;
+    }
 
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    child: InkWell(
-    onTap: () => _navigateToItemDetails(item),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    iconData,
-                    color: iconColor,
-                    size: 24,
-                  ),
-                ),
-                if (index < 10) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 2,
-                    height: 30,
-                    color: Colors.grey[300],
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: () => _navigateToItemDetails(item),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Only show time if scheduled
-                  if (item.scheduledFor != null) ...[
-                    Text(
-                      DateFormat('h:mm a').format(item.scheduledFor!),
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: iconColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: 4),
-                  ],
-                  Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    child: Icon(
+                      iconData,
+                      color: iconColor,
+                      size: 24,
                     ),
                   ),
-                  if (item.description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      item.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                      ),
+                  if (index < 10) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 2,
+                      height: 30,
+                      color: Colors.grey[300],
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    if (item.scheduledFor != null) ...[
                       Text(
-                        item.formattedDuration,
+                        DateFormat('h:mm a').format(item.scheduledFor!),
                         style: TextStyle(
                           color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: Colors.grey[600],
+                      const SizedBox(height: 4),
+                    ],
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
+                    ),
+
+
+                    if (item.category != null && item.category!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Text(
-                          item.location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          item.category!,
                           style: TextStyle(
-                            color: Colors.grey[600],
+                            fontSize: 12,
+                            color: iconColor,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
+
+
+                    if (item.priceRange != null && item.priceRange!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.attach_money,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.priceRange!,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+
+                    if (item.accommodationType != null && item.accommodationType!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.hotel,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.accommodationType!,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    if (item.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.formattedDuration,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'edit') {
+
+                  } else if (value == 'delete') {
+                    _deletePlanItem(item);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete'),
                   ),
                 ],
               ),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'edit') {
-                  // Navigate to edit item screen
-                } else if (value == 'delete') {
-                  _deletePlanItem(item);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Delete'),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
+
+
+
   void _navigateToItemDetails(PlanItem item) async {
     try {
-      if (item.itemType == 'attraction') {
-        setState(() => _isLoading = true);
+      setState(() => _isLoading = true);
 
-        // Show loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Loading attraction details...')),
-        );
 
-        // Fetch the attraction
-        final attraction = await AttractionService.fetchAttractionById(item.itemId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading details...')),
+      );
 
-        if (mounted) {
-          // Navigate to details screen with the full object
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AttractionDetailsScreen(attraction: attraction),
-            ),
-          );
-        }
-      } else if (item.itemType == 'event') {
-        setState(() => _isLoading = true);
+      switch (item.itemType) {
+        case 'attraction':
 
-        // Show loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Loading event details...')),
-        );
+          final attraction = await AttractionService.fetchAttractionById(item.itemId);
 
-        // Fetch the event
-        final event = await EventService.fetchEventById(item.itemId);
+          if (mounted) {
 
-        if (mounted) {
-          // Navigate to details screen with the full object
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EventDetailsScreen(event: event),
-            ),
-          );
-        }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AttractionDetailsScreen(attraction: attraction),
+              ),
+            );
+          }
+          break;
+
+        case 'event':
+
+          final event = await EventService.fetchEventById(item.itemId);
+
+          if (mounted) {
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EventDetailsScreen(event: event),
+              ),
+            );
+          }
+          break;
+
+        case 'food':
+
+          final foodPlace = await FoodService.getFoodPlace(item.itemId);
+
+          if (mounted) {
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FoodPlaceDetailsScreen(placeId: foodPlace.id),
+              ),
+            );
+          }
+          break;
+
+        case 'accommodation':
+          final accommodationService = AccommodationService();
+          final accommodation = await accommodationService.getAccommodationDetails(item.itemId);
+
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AccommodationDetailsScreen(accommodationId: accommodation.id),
+              ),
+            );
+          }
+          break;
+        default:
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Details not available for this item type')),
+            );
+          }
       }
     } catch (e) {
       if (mounted) {
@@ -676,9 +812,8 @@ class _PlanDetailsScreenState extends State<PlanDetailsScreen> {
         setState(() => _isLoading = false);
       }
     }
-  }
-  Future<void> _deletePlanItem(PlanItem item) async {
-    // Guard against null ID
+  }  Future<void> _deletePlanItem(PlanItem item) async {
+
     if (item.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot delete item: item ID is missing')),
