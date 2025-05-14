@@ -1,6 +1,5 @@
 import 'package:intl/intl.dart';
 
-// lib/models/plan.dart
 import 'package:intl/intl.dart';
 
 class Plan {
@@ -27,24 +26,48 @@ class Plan {
   });
 
   factory Plan.fromJson(Map<String, dynamic> json) {
-    // Print the JSON to debug it
     print('Plan JSON: $json');
 
+    // Use default dates if null or invalid
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 1));
+
+    // Try to parse the start date
+    if (json['start_date'] != null) {
+      try {
+        startDate = DateTime.parse(json['start_date']);
+
+        // Check if the parsed date is valid (not year 0001)
+        if (startDate.year < 1000) {
+          print('⚠️ Invalid start date year: ${startDate.year}, using default');
+          startDate = DateTime.now();
+        }
+      } catch (e) {
+        print('❌ Error parsing start_date: $e');
+      }
+    }
+
+    // Try to parse the end date
+    if (json['end_date'] != null) {
+      try {
+        endDate = DateTime.parse(json['end_date']);
+
+        // Check if the parsed date is valid (not year 0001)
+        if (endDate.year < 1000) {
+          print('⚠️ Invalid end date year: ${endDate.year}, using default');
+          endDate = startDate.add(const Duration(days: 1));
+        }
+      } catch (e) {
+        print('❌ Error parsing end_date: $e');
+      }
+    }
+
     return Plan(
-      // Handle the case where ID is uppercase instead of lowercase
-      id: json['id'] != null
-          ? (json['id'] is String ? int.tryParse(json['id']) : json['id'] as int)
-          : (json['ID'] != null
-          ? (json['ID'] is String ? int.tryParse(json['ID']) : json['ID'] as int)
-          : null),
+      id: json['id'] ?? json['ID'],
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      startDate: json['start_date'] != null
-          ? DateTime.parse(json['start_date'])
-          : DateTime.now(),
-      endDate: json['end_date'] != null
-          ? DateTime.parse(json['end_date'])
-          : DateTime.now().add(const Duration(days: 1)),
+      startDate: startDate,
+      endDate: endDate,
       userId: json['user_id'] ?? 0,
       isPublic: json['is_public'] ?? false,
       city: json['city'] ?? '',
@@ -53,8 +76,6 @@ class Plan {
           : [],
     );
   }
-
-
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -70,6 +91,9 @@ class Plan {
 
   int get durationInDays => endDate.difference(startDate).inDays + 1;
 }
+// lib/models/plan.dart
+// This is an excerpt showing just the changes needed to the PlanItem class
+
 class PlanItem {
   int? id;
   int planId;
@@ -79,10 +103,14 @@ class PlanItem {
   String description;
   String location;
   String address;
-  DateTime? scheduledFor;  // Make nullable
+  DateTime? scheduledFor;
   int duration;  // in minutes
   int orderIndex;
   String notes;
+  String? imageURL;  // Added for storing image URL
+  String? category;  // Added for categorization
+  String? priceRange;  // Added for food places
+  String? accommodationType;  // Added for accommodations
 
   PlanItem({
     this.id,
@@ -93,10 +121,14 @@ class PlanItem {
     required this.description,
     required this.location,
     this.address = '',
-    this.scheduledFor,  // No longer required
+    this.scheduledFor,
     required this.duration,
     required this.orderIndex,
     this.notes = '',
+    this.imageURL,
+    this.category,
+    this.priceRange,
+    this.accommodationType,
   });
 
   factory PlanItem.fromJson(Map<String, dynamic> json) {
@@ -117,10 +149,14 @@ class PlanItem {
       address: json['address'] ?? '',
       scheduledFor: json['scheduled_for'] != null
           ? DateTime.parse(json['scheduled_for'])
-          : null,  // Can be null now
+          : null,
       duration: json['duration'] ?? 60,
       orderIndex: json['order_index'] ?? 0,
       notes: json['notes'] ?? '',
+      imageURL: json['image_url'],
+      category: json['category'],
+      priceRange: json['price_range'],
+      accommodationType: json['accommodation_type'],
     );
   }
 
@@ -139,14 +175,28 @@ class PlanItem {
       'notes': notes,
     };
 
-    // Only include scheduled_for if it has a value
     if (scheduledFor != null) {
       data['scheduled_for'] = DateFormat('yyyy-MM-ddTHH:mm:ss').format(scheduledFor!);
     }
 
+    if (imageURL != null) {
+      data['image_url'] = imageURL;
+    }
+
+    if (category != null) {
+      data['category'] = category;
+    }
+
+    if (priceRange != null) {
+      data['price_range'] = priceRange;
+    }
+
+    if (accommodationType != null) {
+      data['accommodation_type'] = accommodationType;
+    }
+
     return data;
   }
-
 
   String get formattedDuration {
     if (duration < 60) {
@@ -158,8 +208,6 @@ class PlanItem {
     }
   }
 }
-
-// lib/models/plan_template.dart
 class PlanTemplate {
   int? id;
   String title;
@@ -183,14 +231,61 @@ class PlanTemplate {
 
   factory PlanTemplate.fromJson(Map<String, dynamic> json) {
     return PlanTemplate(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      city: json['city'],
-      country: json['country'],
-      duration: json['duration'],
-      category: json['category'],
+      // Handle both uppercase "ID" and lowercase "id"
+      id: json['id'] ?? json['ID'],
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      city: json['city'] ?? '',
+      country: json['country'] ?? '',
+      duration: json['duration'] ?? 0,
+      category: json['category'] ?? '',
       isPublic: json['is_public'] ?? true,
+    );
+  }
+}
+
+// Add this class to your models/plan.dart file:
+
+class TemplateItem {
+  int? id;
+  int templateId;
+  String itemType;
+  int itemId;
+  String title;
+  String description;
+  String location;
+  int dayNumber;
+  int orderInDay;
+  int duration;
+  bool recommended;
+
+  TemplateItem({
+    this.id,
+    required this.templateId,
+    required this.itemType,
+    required this.itemId,
+    required this.title,
+    required this.description,
+    required this.location,
+    required this.dayNumber,
+    required this.orderInDay,
+    required this.duration,
+    this.recommended = false,
+  });
+
+  factory TemplateItem.fromJson(Map<String, dynamic> json) {
+    return TemplateItem(
+      id: json['id'],
+      templateId: json['template_id'],
+      itemType: json['item_type'] ?? 'custom',
+      itemId: json['item_id'] ?? 0,
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      location: json['location'] ?? '',
+      dayNumber: json['day_number'] ?? 1,
+      orderInDay: json['order_in_day'] ?? 1,
+      duration: json['duration'] ?? 60,
+      recommended: json['recommended'] ?? false,
     );
   }
 }

@@ -3,6 +3,8 @@ class Event {
   final String title;
   final String description;
   final String location;
+  final String address;
+  final String link;
   final String category;
   final int capacity;
   final int currentCount;
@@ -15,6 +17,8 @@ class Event {
     required this.title,
     required this.description,
     required this.location,
+    required this.address,
+    required this.link,
     required this.category,
     required this.capacity,
     required this.currentCount,
@@ -29,6 +33,8 @@ class Event {
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       location: json['location'] ?? '',
+      address: json['address'] ?? '',
+      link: json['link'] ?? '',
       category: json['category'] ?? '',
       capacity: json['capacity'] ?? 0,
       currentCount: json['current_count'] ?? 0,

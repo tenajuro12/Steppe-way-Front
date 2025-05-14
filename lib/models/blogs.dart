@@ -27,7 +27,6 @@ class Blog {
   }) : this.createdAt = createdAt ?? DateTime.now();
 
   factory Blog.fromJson(Map<String, dynamic> json) {
-    // Handle different possible date formats
     DateTime parseDate(dynamic dateValue) {
       if (dateValue == null) return DateTime.now();
 
@@ -81,7 +80,6 @@ class Blog {
       );
     } catch (e) {
       print('Error creating Blog from JSON: $e');
-      // Return a fallback blog object rather than crashing
       return Blog(
         id: 0,
         title: json['title'] ?? 'Error Parsing Blog',
@@ -161,10 +159,9 @@ class Comment {
   }) : this.createdAt = createdAt ?? DateTime.now();
 
   factory Comment.fromJson(Map<String, dynamic> json) {
-    print("Parsing comment JSON: ${json.keys}"); // Debug what keys are available
+    print("Parsing comment JSON: ${json.keys}");
 
     try {
-      // Check multiple possible ID field names
       final id = json['id'] ?? json['ID'] ?? json['comment_id'];
       print("Extracted comment ID: $id");
 
